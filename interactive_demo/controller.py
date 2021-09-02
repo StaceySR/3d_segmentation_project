@@ -1,11 +1,10 @@
 import torch
 import numpy as np
-from torchvision import transforms
 
 from isegm.inference import clicker
 from isegm.inference.predictors import get_predictor
 from isegm.utils.vis import draw_with_blend_and_clicks
-import tifffile as tiff
+
 
 
 class InteractiveController:
@@ -26,27 +25,31 @@ class InteractiveController:
         self.predictor_params = predictor_params
         self.reset_predictor()
 
-    def set_image(self, image):
-        # input_transform = transforms.Compose([
-        #     transforms.ToTensor(),
-        #     transforms.Normalize([.485, .456, .406], [.229, .224, .225])
-        # ])
+    def normalize(self, image):
+        img = image.copy().astype(np.float32)
+        img -= np.mean(img)
+        img /= np.linalg.norm(img)
+        print("norm", np.linalg.norm(img))
+        img = np.clip(img, 0, 255)
+        img *= (1. / float(img.max()))
+        return (img * 255).astype(np.uint8)
 
-        self.image = image
-        #print(image.shape)
-        im = np.transpose(image, [1, 2, 0])
+    def set_image(self, image):
+
+        self.image = np.transpose(image, [2, 0, 1])
+        print(self.image.shape)
+        image=self.normalize(image)
+        im = image
         im = np.expand_dims(im, axis=0)
         print("im", im.shape)
         self.image_nd_for_flip = im
         self.image_nd_for_brightness = im.astype(np.float64)
-        #print(im.shape)
         self.image_nd = torch.from_numpy(im).to(self.device)
-        #print(self.image_nd.shape)
-        d, h, w = image.shape
+        d, h, w = self.image.shape
         img = np.empty((d, h, w, 3), dtype=np.uint8)
-        img[:, :, :, 0] = image
-        img[:, :, :, 1] = image
-        img[:, :, :, 2] = image
+        img[:, :, :, 0] = self.image
+        img[:, :, :, 1] = self.image
+        img[:, :, :, 2] = self.image
         self.image = img
         self.image_for_brightness = img.astype(np.float64)
         self._result_mask = np.zeros(self.image.shape[:3], dtype=np.uint16)
@@ -148,10 +151,8 @@ class InteractiveController:
             brightness_ori_to_use = brightness_origin/10+0.5
             brightness_to_use = brightness/10+0.5
             self.image = (self.image / brightness_ori_to_use * brightness_to_use).astype(np.uint8)
-            self.image = np.clip(self.image, 0, 255)
             self.image_nd_for_flip = (self.image_nd_for_flip / brightness_ori_to_use * brightness_to_use)\
                 .astype(np.uint8)
-            self.image_nd_for_flip = np.clip(self.image_nd_for_flip, 0, 255)
             cont_img = np.ascontiguousarray(self.image_nd_for_flip)
             self.image_nd = torch.from_numpy(cont_img).to(self.device)
 

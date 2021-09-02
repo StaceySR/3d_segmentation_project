@@ -20,6 +20,7 @@ from isegm.model import initializer
 
 
 def main(cfg):
+    print("cfg", cfg)
     model, model_cfg = init_model(cfg)
     train(model, cfg, model_cfg, start_epoch=cfg.start_epoch)
 
@@ -53,7 +54,7 @@ def init_model(cfg):
 
 def train(model, cfg, model_cfg, start_epoch=0):
     cfg.batch_size = 3 if cfg.batch_size < 1 else cfg.batch_size
-    cfg.val_batch_size = cfg.batch_size
+    cfg.val_batch_size = 1
 
     cfg.input_normalization = model_cfg.input_normalization
     crop_size = model_cfg.crop_size
@@ -62,7 +63,7 @@ def train(model, cfg, model_cfg, start_epoch=0):
     loss_cfg.instance_loss = SigmoidBinaryCrossEntropyLoss()
     loss_cfg.instance_loss_weight = 1.0
 
-    num_epochs = 500
+    num_epochs = 300
     num_masks = 1
 
     train_augmentator = Compose([
@@ -85,10 +86,11 @@ def train(model, cfg, model_cfg, start_epoch=0):
         return random.uniform(0.75, 1.25)
 
     points_sampler = MultiPointSampler(model_cfg.num_max_points, prob_gamma=0.7,
-                                       merge_objects_prob=0,
+                                       merge_objects_prob=0.15,
                                        max_num_merged_objects=2)
 
     trainset = LiverDataset(
+        cfg.sliding_window,
         cfg.LIVER_PATH,
         split='train',
         num_masks=num_masks,
@@ -102,6 +104,7 @@ def train(model, cfg, model_cfg, start_epoch=0):
     )
 
     valset = LiverDataset(
+        cfg.sliding_window,
         cfg.LIVER_PATH,
         split='val',
         augmentator=val_augmentator,
@@ -128,10 +131,10 @@ def train(model, cfg, model_cfg, start_epoch=0):
                         metrics=[AdaptiveIoU()],
                         max_interactive_points=model_cfg.num_max_points)
     if cfg.mode == 'evaluate':
-        trainer.evaluate()
+        trainer.evaluate(cfg.sliding_window)
     else:
         logger.info(f'Starting Epoch: {start_epoch}')
         logger.info(f'Total Epochs: {num_epochs}')
         for epoch in range(start_epoch, num_epochs):
             trainer.training(epoch)
-            trainer.validation(epoch)
+            trainer.validation(epoch, cfg.sliding_window)

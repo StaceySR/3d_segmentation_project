@@ -11,7 +11,7 @@ from interactive_demo.canvas import CanvasImage
 from interactive_demo.controller import InteractiveController
 from interactive_demo.wrappers import BoundedNumericalEntry, FocusHorizontalScale, FocusCheckButton, \
     FocusButton, FocusLabelFrame
-from scipy.ndimage import zoom
+import nibabel as nib
 
 class InteractiveDemoApp(ttk.Frame):
     def __init__(self, master, args, model):
@@ -212,34 +212,11 @@ class InteractiveDemoApp(ttk.Frame):
             cv2.imwrite('{}.png'.format(self.filenames[self.current_file_index]), mask)
 
     def _set_image(self, value):
-        ret = tiff.imread(self.filenames[value])
-        #ret = zoom(ret, (0.5, 0.5, 0.5), order=3)
-        ret = self.normalize(ret)
-        #image = cv2.cvtColor(cv2.imread(self.filenames[value]), cv2.COLOR_BGR2RGB)
-        #tiff.imwrite("boundary.tif", ret)
+        ret = nib.load(self.filenames[value]).get_fdata()
+        #ret = tiff.imread(self.filenames[value])
 
         self.filename = os.path.basename(self.filenames[value])
         self.controller.set_image(ret)
-
-    def normalize(self, image):
-        '''
-        This function is to normalize the input grayscale image by
-        substracting globle mean and dividing standard diviation for
-        visualization.
-
-        Input:  a grayscale image
-
-        Output: normolized grascale image
-
-        '''
-        img = image.copy().astype(np.float32)
-        img -= np.mean(img)
-        img /= np.linalg.norm(img)
-        # img = (img - img.min() )
-        print("norm", np.linalg.norm(img))
-        img = np.clip(img, 0, 255)
-        img *= (1. / float(img.max()))
-        return (img * 255).astype(np.uint8)
 
     def _load_image_callback(self):
         self.menubar.focus_set()

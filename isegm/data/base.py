@@ -1,30 +1,11 @@
 import random
 import pickle
-
 import cv2
 import numpy as np
 import torch
-from torchvision import transforms
-
-from monai.transforms import (
-    AsDiscrete,
-    AsDiscreted,
-    EnsureChannelFirstd,
-    Compose,
-    CropForegroundd,
-    LoadImaged,
-    Orientationd,
-    RandCropByPosNegLabeld,
-    ScaleIntensityRanged,
-    Spacingd,
-    EnsureTyped,
-    EnsureType,
-    Invertd,
-)
-# import monai
 
 from .points_sampler import SinglePointSampler
-import tifffile as tiff
+
 
 
 class ISDataset(torch.utils.data.dataset.Dataset):
@@ -61,31 +42,6 @@ class ISDataset(torch.utils.data.dataset.Dataset):
             scale = self.image_rescale
             self.image_rescale = lambda shape: scale
 
-        if input_transform is None:
-            #input_transform = transforms.Compose([
-            #    transforms.ToTensor(),
-            #    transforms.Normalize([.485, .456, .406], [.229, .224, .225]),
-            #])
-            input_transform = Compose([
-              #LoadImaged(keys=["image", "label"]),
-              #EnsureChannelFirstd(keys=["image", "label"]),
-              #Spacingd(keys=["image", "label"], pixdim=(1.5, 1.5, 2.0), mode=("bilinear", "nearest")),
-              #Orientationd(keys=["image", "label"], axcodes="RAS"),
-              ScaleIntensityRanged(keys=["image"], a_min=-57, a_max=164, b_min=0.0, b_max=1.0, clip=True,),
-              #CropForegroundd(keys=["image", "instances_mask"], source_key="image"),
-              # RandCropByPosNegLabeld(
-              #   keys=["image", "label"],
-              #   label_key="label",
-              #   spatial_size=(96, 96, 96),
-              #   pos=1,
-              #   neg=1,
-              #   num_samples=4,
-              #   image_key="image",
-              #   image_threshold=0,),
-              #EnsureTyped(keys=["image", "instances_mask"]),
-              ]
-)
-
         self.input_transform = input_transform
 
         self.dataset_samples = None
@@ -112,8 +68,7 @@ class ISDataset(torch.utils.data.dataset.Dataset):
 
         sample['objects_ids'] = [obj_id for obj_id, obj_info in sample['instances_info'].items()
                                  if not obj_info['ignore']]
-        
-        #image = self.input_transform(sample)
+
         points, masks = [], []
         self.points_sampler.sample_object(sample)
         for i in range(self.num_masks):
@@ -125,9 +80,7 @@ class ISDataset(torch.utils.data.dataset.Dataset):
         masks = np.array(masks)
         points = np.array(points, dtype=np.float32)
 
-        #sample1 = self.input_transform(sample)
         image = sample['image']
-
         image = torch.from_numpy(image)
 
         output = {
@@ -138,7 +91,6 @@ class ISDataset(torch.utils.data.dataset.Dataset):
 
         if self.with_image_info and 'image_id' in sample:
             output['image_info'] = sample['image_id']
-        #print("baseline103")
         return output
 
     def check_sample_types(self, sample):

@@ -137,4 +137,4 @@ def train(model, cfg, model_cfg, start_epoch=0):
         logger.info(f'Total Epochs: {num_epochs}')
         for epoch in range(start_epoch, num_epochs):
             trainer.training(epoch)
-            trainer.validation(epoch, sliding_window)
+            trainer.validation(epoch, cfg.sliding_window)

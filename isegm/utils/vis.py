@@ -69,13 +69,24 @@ def draw_probmap(x):
     #return im5
 
 
-def draw_points(image, imageNum, points, color, radius=3):
+# def draw_points(image, imageNum, points, color, radius=3):
+#     image = image.copy()
+#     for p in points:
+#         #print(int(p[2]))
+#         if int(p[2]) != -1 and imageNum==int(p[2]):
+#           #print(image[int(p[2])])
+#           image = cv2.circle(np.array(image), (int(p[1]), int(p[0])), radius, color, -1)
+#
+#     return image
+
+def draw_points(image, points, color, radius=3):
     image = image.copy()
     for p in points:
         #print(int(p[2]))
-        if int(p[2]) != -1 and imageNum==int(p[2]):
+        page_num = int(p[2])
+        if page_num != -1:
           #print(image[int(p[2])])
-          image = cv2.circle(np.array(image), (int(p[1]), int(p[0])), radius, color, -1)
+          image[page_num] = cv2.circle(np.array(image[page_num]), (int(p[1]), int(p[0])), radius, color, -1)
 
     return image
 
@@ -122,9 +133,10 @@ def draw_with_blend_and_clicks(img, mask=None, alpha=0.6, clicks_list=None, pos_
         rgb_mask = palette[mask.astype(np.uint8)]
 
         mask_region = (mask > 0).astype(np.uint8)
-        result = result * (1 - mask_region[:, :, np.newaxis]) + \
-            (1 - alpha) * mask_region[:, :, np.newaxis] * result + \
-            alpha * rgb_mask
+        print((1 - mask_region[:, :, np.newaxis]).shape)
+        result = result * (1 - mask_region[:, :, :, np.newaxis]) + \
+                 (1 - alpha) * mask_region[:, :, :, np.newaxis] * result + \
+                 alpha * rgb_mask
         result = result.astype(np.uint8)
 
         # result = (result * (1 - alpha) + alpha * rgb_mask).astype(np.uint8)

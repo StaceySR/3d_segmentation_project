@@ -6,10 +6,6 @@ import numpy as np
 
 from isegm.model.is_deeplab_model import get_deeplab_model
 from isegm.model.is_hrnet_model import get_hrnet_model
-from isegm.data.berkeley import BerkeleyDataset
-from isegm.data.grabcut import GrabCutDataset
-from isegm.data.davis import DavisDataset
-from isegm.data.sbd import SBDEvaluationDataset
 from isegm.data.Liver import LiverDataset
 from isegm.data.spleen import SpleenDataset
 from isegm.data.MnM import MnMDataset
@@ -108,19 +104,7 @@ def load_deeplab_is_model(state_dict, device, backbone='auto', deeplab_ch=128, a
 
 
 def get_dataset(dataset_name, cfg):
-    if dataset_name == 'GrabCut':
-        dataset = GrabCutDataset(cfg.GRABCUT_PATH)
-    elif dataset_name == 'Berkeley':
-        dataset = BerkeleyDataset(cfg.BERKELEY_PATH)
-    elif dataset_name == 'DAVIS':
-        dataset = DavisDataset(cfg.DAVIS_PATH)
-    elif dataset_name == 'COCO_MVal':
-        dataset = DavisDataset(cfg.COCO_MVAL_PATH)
-    elif dataset_name == 'SBD':
-        dataset = SBDEvaluationDataset(cfg.SBD_PATH)
-    elif dataset_name == 'SBD_Train':
-        dataset = SBDEvaluationDataset(cfg.SBD_PATH, split='train')
-    elif dataset_name == 'Liver':
+    if dataset_name == 'Liver':
         dataset = LiverDataset(cfg.LIVER_PATH)
     elif dataset_name == 'spleen':
         dataset = SpleenDataset(cfg.SPLEEN_PATH)
