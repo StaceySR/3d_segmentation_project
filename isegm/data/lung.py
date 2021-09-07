@@ -36,9 +36,9 @@ class LungDataset(ISDataset):
             for image_name, label_name in zip(self.train_images, self.train_labels)
         ]
         if self.dataset_split == 'train':
-            self.dataset_samples = self.data_dicts[:-23]
+            self.dataset_samples = self.data_dicts[:-18]
         else:
-            self.dataset_samples = self.data_dicts[-23:]
+            self.dataset_samples = self.data_dicts[-18:]
         self.train_transforms = Compose(
             [
                 LoadImaged(keys=["image", "label"]),
