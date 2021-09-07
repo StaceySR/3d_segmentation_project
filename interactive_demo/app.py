@@ -347,14 +347,12 @@ class InteractiveDemoApp(ttk.Frame):
                                                   brightness_origin=self.brightness_origin)
         self.flip_origin = self.state['flip_image'].get()
         self.brightness_origin = self.state['brightness'].get()
-        #print(333)
         if self.image_on_canvas is None:
             self.image_on_canvas = CanvasImage(self.canvas_frame, self.canvas)
             self.image_on_canvas.register_click_callback(self._click_callback)
 
         self._set_click_dependent_widgets_state()
         if image is not None:
-            #print(image.shape)
             self.image_on_canvas.reload_image(image, reset_canvas)
 
     def _set_click_dependent_widgets_state(self):

@@ -34,20 +34,17 @@ class BasePredictor(object):
 
     def get_prediction(self, clicker):
         clicks_list = clicker.get_clicks()
-        #print(clicks_list)
 
         image_nd, clicks_lists, is_image_changed = self.apply_transforms(
             self.original_image, [clicks_list]
         )
 
-        #print(clicks_lists)
 
         pred_logits = self._get_prediction(image_nd, clicks_lists, is_image_changed)
         prediction = F.interpolate(pred_logits, mode='trilinear', align_corners=True,
                                    size=image_nd.size()[2:])
 
         for t in reversed(self.transforms):
-            #print(t)
             prediction = t.inv_transform(prediction)
 
         if self.zoom_in is not None and self.zoom_in.check_possible_recalculation():
@@ -70,10 +67,7 @@ class BasePredictor(object):
     def apply_transforms(self, image_nd, clicks_lists):
         is_image_changed = False
         for t in self.transforms:
-            #print(t)
             image_nd, clicks_lists = t.transform(image_nd, clicks_lists)
-            # print(image_nd)
-            #print(clicks_lists)
             is_image_changed |= t.image_changed
 
         return image_nd, clicks_lists, is_image_changed
@@ -96,7 +90,6 @@ class BasePredictor(object):
             neg_clicks = neg_clicks + (num_max_points - len(neg_clicks)) * [(-1, -1, -1)]
             total_clicks.append(pos_clicks + neg_clicks)
 
-        #print(total_clicks)
         return torch.tensor(total_clicks, device=self.device)
 
     def get_states(self):

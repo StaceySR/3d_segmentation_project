@@ -2,9 +2,6 @@ import os
 import logging
 from copy import deepcopy
 from collections import defaultdict
-import sys
-
-import cv2
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -12,30 +9,13 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import Normalize
 
 from isegm.utils.log import logger, TqdmToLogger, SummaryWriterAvg
-from isegm.utils.vis import draw_probmap, draw_points
+from isegm.utils.vis import draw_probmap, draw_points_for_training
 from isegm.utils.misc import save_checkpoint
-from isegm.inference import utils
-from isegm.inference.clicker import Clicker
 
 import tifffile as tiff
 from monai.metrics import DiceMetric
-from monai.transforms import (
-    AsDiscrete,
-    AsDiscreted,
-    EnsureChannelFirstd,
-    Compose,
-    CropForegroundd,
-    LoadImaged,
-    Orientationd,
-    RandCropByPosNegLabeld,
-    ScaleIntensityRanged,
-    Spacingd,
-    EnsureTyped,
-    EnsureType,
-    Invertd,
-)
 
-from typing import Any, Callable, List, Sequence, Tuple, Union
+from typing import Any, List, Sequence, Union
 
 import torch.nn.functional as F
 
@@ -126,13 +106,11 @@ class ISTrainer(object):
 
         self.tqdm_out = TqdmToLogger(logger, level=logging.INFO)
         if cfg.input_normalization:
-            #print("trainerline98")
             mean = torch.tensor(cfg.input_normalization['mean'], dtype=torch.float32)
             std = torch.tensor(cfg.input_normalization['std'], dtype=torch.float32)
 
             self.denormalizator = Normalize((-mean / std), (1.0 / std))
         else:
-            #print("trainerline104")
             self.denormalizator = lambda x: x
 
         self._load_weights()
@@ -152,7 +130,6 @@ class ISTrainer(object):
         self.net.train()
         for i, batch_data in enumerate(tbar):
             global_step = epoch * len(self.train_data) + i
-            #print(i)
             loss, losses_logging, splitted_batch_data, outputs = \
                 self.batch_forward(batch_data)
             self.optim.zero_grad()
@@ -173,10 +150,10 @@ class ISTrainer(object):
             for k, v in self.loss_cfg.items():
                 if '_loss' in k and hasattr(v, 'log_states') and self.loss_cfg.get(k + '_weight', 0.0) > 0:
                     v.log_states(self.sw, f'{log_prefix}Losses/{k}', global_step)
-            #print("trainerline145")
+
             if self.image_dump_interval > 0 and global_step % self.image_dump_interval == 1:
                 self.save_visualization(splitted_batch_data, outputs, global_step, prefix='train')
-            #print("trainerline148")
+
             self.sw.add_scalar(tag=f'{log_prefix}States/learning_rate',
                                value=self.lr if self.lr_scheduler is None else self.lr_scheduler.get_lr()[-1],
                                global_step=global_step)
@@ -219,7 +196,7 @@ class ISTrainer(object):
             global_step = epoch * len(self.val_data) + i
             
             if sliding_window:
-                n = self.sliding_window_inference2(batch_data, (160, 160, 160), 4)
+                n = self.new_sliding_window_inference(batch_data, (160, 160, 160), 4)
                 output = dict()
                 output['instances'] = n
                 loss, batch_losses_logging, splitted_batch_data, outputs = \
@@ -261,14 +238,11 @@ class ISTrainer(object):
 
         self.net.eval()
         dice_metric = DiceMetric(include_background=False, reduction="mean")
-        post_pred = Compose([EnsureType(), AsDiscrete(argmax=True, to_onehot=True, n_classes=2)])
-        post_label = Compose([EnsureType(), AsDiscrete(to_onehot=True, n_classes=2)])
         for i, batch_data in enumerate(tbar):
-            global_step = len(self.val_data) + i
             instances = batch_data['instances'].squeeze(1)
 
             if sliding_window:
-                n = self.sliding_window_inference2(batch_data, (160, 160, 160), 4)
+                n = self.new_sliding_window_inference(batch_data, (160, 160, 160), 4)
             else:
                 _, _, _, output = \
                     self.batch_forward(batch_data, validation=True)
@@ -330,7 +304,8 @@ class ISTrainer(object):
                              *(batch_data[x] for x in m.gt_outputs))
         return loss, losses_logging, batch_data, output
 
-    def sliding_window_inference2(
+    # This method rewrites the sliding_window_inference method from monai
+    def new_sliding_window_inference(
         self,
         batch_data,
         roi_size: Union[Sequence[int], int],
@@ -349,8 +324,6 @@ class ISTrainer(object):
         if overlap < 0 or overlap >= 1:
             raise AssertionError("overlap must be >= 0 and < 1.")
 
-        # determine image spatial size and batch size
-        # Note: all input images must have the same image size and batch size
         image_size_ = list(batch_data['images'].shape[2:])
         batch_size = batch_data['images'].shape[0]
 
@@ -360,7 +333,6 @@ class ISTrainer(object):
             sw_device = batch_data['images'].device
 
         roi_size = fall_back_tuple(roi_size, image_size_)
-        # in case that image size is smaller than roi size
         image_size = tuple(max(image_size_[i], roi_size[i]) for i in range(num_spatial_dims))
         pad_size = []
         for k in range(len(batch_data['images'].shape) - 1, 1, -1):
@@ -373,17 +345,14 @@ class ISTrainer(object):
 
         scan_interval = _get_scan_interval(image_size, roi_size, num_spatial_dims, overlap)
 
-        # Store all slices in list
         slices = dense_patch_slices(image_size, roi_size, scan_interval)
-        num_win = len(slices)  # number of windows per image
-        total_slices = num_win * batch_size  # total number of windows
+        num_win = len(slices)
+        total_slices = num_win * batch_size
 
-        # Create window-level importance map
         importance_map = compute_importance_map(
             get_valid_patch_size(image_size, roi_size), mode=mode, sigma_scale=sigma_scale, device=device
         )
 
-        # Perform predictions
         output_image, count_map = torch.tensor(0.0, device=device), torch.tensor(0.0, device=device)
         _initialized = False
         for slice_g in range(0, total_slices, sw_batch_size):
@@ -430,21 +399,18 @@ class ISTrainer(object):
             loss, batch_losses_logging, splitted_batch_data, outputs = \
                 self.batch_forward(window_data, validation=True)
 
-            if not _initialized:  # init. buffer at the first iteration
+            if not _initialized:
                 output_classes = outputs['instances'].shape[1]
                 output_shape = [batch_size, output_classes] + list(image_size)
-                # allocate memory to store the full output and the count for overlapping parts
                 output_image = torch.zeros(output_shape, dtype=torch.float32, device=device)
                 count_map = torch.zeros(output_shape, dtype=torch.float32, device=device)
                 _initialized = True
 
-            # store the result in the proper location of the full output. Apply weights from importance map.
             for idx, original_idx in zip(slice_range, unravel_slice):
                 outputs['instances'] = outputs['instances'].to('cpu')
                 output_image[original_idx] += importance_map * outputs['instances'][idx - slice_g]
                 count_map[original_idx] += importance_map
 
-        # account for any overlapping sections
         output_image = output_image / count_map
 
         final_slicing: List[slice] = []
@@ -476,35 +442,28 @@ class ISTrainer(object):
         if not output_images_path.exists():
             output_images_path.mkdir(parents=True)
         image_name_prefix = f'{global_step:06d}'
-        #print("trainerline260")
         def _save_image(suffix, image):
             tiff.imwrite(str(output_images_path / f'{image_name_prefix}_{suffix}.tif'),
                         image)
-        #print("trainerline266")
         images = splitted_batch_data['images']
         print(images.shape)
         points = splitted_batch_data['points']
         instance_masks = splitted_batch_data['instances']
         image_blob, points = images[0], points[0]
-        #print("trainerline272")
-        #image = self.denormalizator(image_blob).cpu().numpy() * 255
         image = image_blob.cpu().numpy()
         image = image[0]
         gt_instance_masks = instance_masks.cpu().numpy()
         predicted_instance_masks = torch.sigmoid(outputs['instances']).detach().cpu().numpy()
-        #print(predicted_instance_masks)
+
         points = points.detach().cpu().numpy()
         if self.max_interactive_points > 0:
             points = points.reshape((-1, 2 * self.max_interactive_points, 3))
         else:
             points = points.reshape((-1, 1, 2))
-        #print("trainerline285")
         num_masks = points.shape[0]
         gt_masks = np.squeeze(gt_instance_masks[:num_masks], axis=1)
-        #print(gt_masks.shape)
         predicted_masks = np.squeeze(predicted_instance_masks[:num_masks], axis=1)
-        #print(predicted_masks.shape)
-        #print("trainerline289")
+
         viz_image = []
         i = 0
         for gt_mask, point, predicted_mask in zip(gt_masks, points, predicted_masks):
@@ -512,8 +471,7 @@ class ISTrainer(object):
             gt_mask = gt_mask.transpose([2, 0, 1])
             predicted_mask = predicted_mask.transpose([2, 0, 1])
             image = image.transpose([2, 0, 1])
-            #gt_mask = gt_mask  * 255
-            #predicted_mask = predicted_mask  * 255
+
             image = image  * 255
             
             for i in range(image.shape[0]):
@@ -525,9 +483,9 @@ class ISTrainer(object):
               ret[:, :, 2] = image_i
               tiff.imwrite('./c.tif', gt_mask)
               
-              timage = draw_points(ret, i, point[:max(1, self.max_interactive_points)], (0, 255, 0))
+              timage = draw_points_for_training(ret, i, point[:max(1, self.max_interactive_points)], (0, 255, 0))
               if self.max_interactive_points > 0:
-                  timage = draw_points(timage, i, point[self.max_interactive_points:], (0, 0, 255))
+                  timage = draw_points_for_training(timage, i, point[self.max_interactive_points:], (0, 0, 255))
               
               gt_mask_i = draw_probmap(gt_mask[i])
               predicted_mask_i = draw_probmap(predicted_mask[i])

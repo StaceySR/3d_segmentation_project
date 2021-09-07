@@ -50,10 +50,6 @@ class DistMapsModel(nn.Module):
     def forward(self, image, points):
 
         coord_features = self.dist_maps(image, points)
-        #print("isdeep53")
-        #print(image.shape)
-        #print(coord_features.shape)
-        #print("isdeep56")
 
         if self.rgb_conv is not None:
             x = self.rgb_conv(torch.cat((image, coord_features), dim=1))

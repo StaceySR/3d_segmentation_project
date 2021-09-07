@@ -10,11 +10,8 @@ class LimitLongestSide(ZoomIn):
         image_max_size = max(image_nd.shape[2:5])
         self.image_changed = False
 
-        #print(self.target_size)
         if image_max_size <= self.target_size:
-            #print(15)
             return image_nd, clicks_lists
-        #print(17)
         self._input_image = image_nd
 
         self._object_roi = (0, image_nd.shape[2] - 1, 0, image_nd.shape[3] - 1)

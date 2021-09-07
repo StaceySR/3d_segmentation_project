@@ -8,7 +8,6 @@ class AddHorizontalFlip(BaseTransform):
     def transform(self, image_nd, clicks_lists):
         assert len(image_nd.shape) == 5
         image_nd = torch.cat([image_nd, torch.flip(image_nd, dims=[3])], dim=0)
-        #print(image_nd.shape)
 
         image_width = image_nd.shape[3]
         clicks_lists_flipped = []
@@ -22,13 +21,9 @@ class AddHorizontalFlip(BaseTransform):
         return image_nd, clicks_lists
 
     def inv_transform(self, prob_map):
-        #print(prob_map.shape)
         assert len(prob_map.shape) == 5 and prob_map.shape[0] % 2 == 0
         num_maps = prob_map.shape[0] // 2
-        #print(num_maps)
         prob_map, prob_map_flipped = prob_map[:num_maps], prob_map[num_maps:]
-        #print(prob_map.shape)
-        #print(prob_map_flipped.shape)
 
         return 0.5 * (prob_map + torch.flip(prob_map_flipped, dims=[3]))
 

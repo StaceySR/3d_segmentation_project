@@ -53,9 +53,6 @@ class SinglePointSampler(BasePointSampler):
 
     def sample_points(self):
         assert self._selected_mask is not None
-        # print("pointssamplerline56")
-        #print(self._selected_mask)
-        #print(self._selected_indices)
         if self._selected_indices is None:
             return [(-1, -1, -1)]
         else:

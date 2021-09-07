@@ -31,16 +31,14 @@ class ZoomIn(BaseTransform):
         self.image_changed = False
 
         clicks_list = clicks_lists[0]
-        #print(self.skip_clicks)
         if len(clicks_list) <= self.skip_clicks:
             return image_nd, clicks_lists
         self._input_image_shape = image_nd.shape
 
         current_object_roi = None
-        #print(self._prev_probs)
         if self._prev_probs is not None:
             current_pred_mask = (self._prev_probs > self.prob_thresh)[0, 0]
-            #print(current_pred_mask.shape)
+
             if current_pred_mask.sum() > 0:
                 current_object_roi = get_object_roi(current_pred_mask, clicks_list,
                                                     self.expansion_ratio, self.min_crop_size)

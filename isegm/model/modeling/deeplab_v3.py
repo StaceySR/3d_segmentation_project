@@ -43,7 +43,6 @@ class DeepLabV3Plus(nn.Module):
                           out_channels=ch,
                           project_dropout=project_dropout,
                           norm_layer=self.norm_layer)
-        #print("deeplabline46")
 
         if inference_mode:
             self.set_prediction_mode()

@@ -131,7 +131,6 @@ class CanvasImage:
         self.__imframe.columnconfigure(0, weight=1)
 
     def __show_image(self):
-        #print(self.page_number)
         box_image = self.canvas.coords(self.container)  # get image area
         box_canvas = (self.canvas.canvasx(0),  # get visible area of the canvas
                       self.canvas.canvasy(0),

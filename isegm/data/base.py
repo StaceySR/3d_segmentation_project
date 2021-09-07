@@ -129,7 +129,6 @@ class ISDataset(torch.utils.data.dataset.Dataset):
     def augment_sample(self, sample, use_zoom_in=False):
         
         augmentator = self.augmentator if not use_zoom_in else self.zoom_in.augmentator
-        # print(augmentator)
         #if augmentator is None:
         return sample
 

@@ -23,12 +23,12 @@ class BRSBasePredictor(BasePredictor):
 
     def _get_clicks_maps_nd(self, clicks_lists, image_shape, radius=1):
         pos_clicks_map = np.zeros((len(clicks_lists), 1) + image_shape, dtype=np.float32)
-        #print(pos_clicks_map.shape)
+
         neg_clicks_map = np.zeros((len(clicks_lists), 1) + image_shape, dtype=np.float32)
 
         for list_indx, clicks_list in enumerate(clicks_lists):
             for click in clicks_list:
-                #print(click)
+
                 y, x, z = click.coords
                 y, x, z = int(round(y)), int(round(x)), int(round(z))
                 y1, x1 = y - radius, x - radius
@@ -123,11 +123,10 @@ class FeatureBRSPredictor(BRSBasePredictor):
     def _get_head_input(self, image_nd, points):
         with torch.no_grad():
             coord_features = self.net.dist_maps(image_nd, points)
-            #print(coord_features.shape)
-            #print(image_nd.shape)
+
             x = self.net.rgb_conv(torch.cat((image_nd, coord_features), dim=1))
             if self.insertion_mode == 'after_c4' or self.insertion_mode == 'after_aspp':
-                #print(x.shape)
+
                 c1, _, c3, c4 = self.net.feature_extractor.backbone(x)
                 c1 = self.net.feature_extractor.skip_project(c1)
 
