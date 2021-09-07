@@ -8,7 +8,7 @@ from isegm.model.is_deeplab_model import get_deeplab_model
 from isegm.model.is_hrnet_model import get_hrnet_model
 from isegm.data.Liver import LiverDataset
 from isegm.data.spleen import SpleenDataset
-from isegm.data.MnM import MnMDataset
+from isegm.data.lung import  LungDataset
 
 
 def get_time_metrics(all_ious, elapsed_time):
@@ -108,8 +108,8 @@ def get_dataset(dataset_name, cfg):
         dataset = LiverDataset(cfg.LIVER_PATH)
     elif dataset_name == 'spleen':
         dataset = SpleenDataset(cfg.SPLEEN_PATH)
-    elif dataset_name == 'MnM':
-        dataset = MnMDataset(cfg.MNM_PATH)
+    elif dataset_name == 'lung':
+        dataset = LungDataset(cfg.MNM_PATH)
     else:
         dataset = None
 

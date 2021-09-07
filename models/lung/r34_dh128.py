@@ -13,13 +13,14 @@ from isegm.engine.trainer import ISTrainer
 from isegm.model.is_deeplab_model import get_deeplab_model
 from isegm.model.losses import SigmoidBinaryCrossEntropyLoss
 from isegm.model.metrics import AdaptiveIoU
-from isegm.data.MnM import MnMDataset
+from isegm.data.lung import LungDataset
 from isegm.data.points_sampler import MultiPointSampler
 from isegm.utils.log import logger
 from isegm.model import initializer
 
 
 def main(cfg):
+    print("cfg", cfg)
     model, model_cfg = init_model(cfg)
     train(model, cfg, model_cfg, start_epoch=cfg.start_epoch)
 
@@ -53,7 +54,7 @@ def init_model(cfg):
 
 def train(model, cfg, model_cfg, start_epoch=0):
     cfg.batch_size = 3 if cfg.batch_size < 1 else cfg.batch_size
-    cfg.val_batch_size = cfg.batch_size
+    cfg.val_batch_size = 1
 
     cfg.input_normalization = model_cfg.input_normalization
     crop_size = model_cfg.crop_size
@@ -62,7 +63,7 @@ def train(model, cfg, model_cfg, start_epoch=0):
     loss_cfg.instance_loss = SigmoidBinaryCrossEntropyLoss()
     loss_cfg.instance_loss_weight = 1.0
 
-    num_epochs = 120
+    num_epochs = 300
     num_masks = 1
 
     train_augmentator = Compose([
@@ -88,26 +89,28 @@ def train(model, cfg, model_cfg, start_epoch=0):
                                        merge_objects_prob=0.15,
                                        max_num_merged_objects=2)
 
-    trainset = MnMDataset(
-        cfg.MNM_PATH,
+    trainset = LungDataset(
+        cfg.sliding_window,
+        cfg.LUNG_PATH,
         split='train',
         num_masks=num_masks,
         augmentator=train_augmentator,
         points_from_one_object=False,
-        input_transform=model_cfg.input_transform,
+        #input_transform=model_cfg.input_transform,
         min_object_area=80,
         keep_background_prob=0.0,
         image_rescale=scale_func,
         points_sampler=points_sampler
     )
 
-    valset = MnMDataset(
-        cfg.MNM_PATH,
+    valset = LungDataset(
+        cfg.sliding_window,
+        cfg.LUNG_PATH,
         split='val',
         augmentator=val_augmentator,
         num_masks=num_masks,
         points_from_one_object=False,
-        input_transform=model_cfg.input_transform,
+        #input_transform=model_cfg.input_transform,
         min_object_area=80,
         image_rescale=scale_func,
         points_sampler=points_sampler
@@ -127,9 +130,11 @@ def train(model, cfg, model_cfg, start_epoch=0):
                         image_dump_interval=100,
                         metrics=[AdaptiveIoU()],
                         max_interactive_points=model_cfg.num_max_points)
-    logger.info(f'Starting Epoch: {start_epoch}')
-    logger.info(f'Total Epochs: {num_epochs}')
-    print('r34_dh128.pyline129')
-    for epoch in range(start_epoch, num_epochs):
-        trainer.training(epoch)
-        trainer.validation(epoch)
+    if cfg.mode == 'evaluate':
+        trainer.evaluate(cfg.sliding_window)
+    else:
+        logger.info(f'Starting Epoch: {start_epoch}')
+        logger.info(f'Total Epochs: {num_epochs}')
+        for epoch in range(start_epoch, num_epochs):
+            trainer.training(epoch)
+            trainer.validation(epoch, cfg.sliding_window)
