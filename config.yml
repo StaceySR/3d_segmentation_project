@@ -5,7 +5,6 @@ SPLEEN_MODELS_PATH: "./experiments/spleen/r34_dh128/053_first-try/checkpoints"
 MNM_MODELS_PATH: "./weights"
 
 LIVER_PATH: "./datasets/Liver"
-MNM_PATH: "./datasets/MnM"
 SPLEEN_PATH: "./datasets/Task09_Spleen"
 
 # You can download the weights for HRNet from the repository:
