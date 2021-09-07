@@ -4,5 +4,6 @@ This project is about doing segmentation on 3d medical images with an extra inpu
 ## Training
 Training of this project is done on Google Colab. The datasets that we choose for this project are spleen, liver, and lung datasets from <a href=http://medicaldecathlon.com/ title="Flaticon">medical dedcathlon</a>. 
 ## Evaluation and Demo
+![](ezgif.com-gif-maker.gif)
 ## References
 * This project is based on the <a href="https://github.com/saic-vul/fbrs_interactive_segmentation" title="Flaticon">f-brs click-based interactive segementation project</a>, and therefore should be as a reference to that project. 
