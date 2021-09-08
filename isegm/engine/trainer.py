@@ -161,7 +161,6 @@ class ISTrainer(object):
             tbar.set_description(f'Epoch {epoch}, training loss {train_loss/(i+1):.6f}')
             for metric in self.train_metrics:
                 metric.log_states(self.sw, f'{log_prefix}Metrics/{metric.name}', global_step)
-        # print("trainline154")
         for metric in self.train_metrics:
             self.sw.add_scalar(tag=f'{log_prefix}Metrics/{metric.name}',
                                value=metric.get_epoch_value(),
@@ -304,7 +303,19 @@ class ISTrainer(object):
                              *(batch_data[x] for x in m.gt_outputs))
         return loss, losses_logging, batch_data, output
 
-    # This method rewrites the sliding_window_inference method from monai
+    # This method rewrites the sliding_window_inference method from monai. Copyright of the original code is as below:
+    # 
+    #
+    # Copyright 2020 - 2021 MONAI Consortium
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License. 
     def new_sliding_window_inference(
         self,
         batch_data,
