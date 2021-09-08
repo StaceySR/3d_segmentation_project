@@ -8,6 +8,15 @@ python3 train.py --model_path=models/spleen/r34_dh128.py --gpus=0 --workers=0 --
 ```
 Sliding window option here is for whether doing validation using sliding window technique. If the option is true, the trainer will split the input images for validation into a number of 160*160*160 images to separately go through the network and do validation. 
 ## Evaluation and Demo
+To evaluate the performance of post-trained models, users need to locate their checkpoint in the experiment directory and run command like following:
+```
+python3 train.py --model_path=models/spleen/r34_dh128.py --gpus=0 --workers=0 --exp-name=your_exp_name --resume-exp=your_exp_number --resume-prefix=your_checkpoint_number --mode=evaluate --sliding-window=True
+```
+To run the demo application, users can need to load in their checkpoint and run command like following in their local machines:
+```
+python3 demo.py --checkpoint=your_checkpoint_name --gpu=0
+```
+The segmentation process in the demo app will be like:
 ![](demo.gif)
 ## License Notice and References
 * This project is based on the <a href="https://github.com/saic-vul/fbrs_interactive_segmentation" title="Flaticon">f-brs click-based interactive segementation project</a>, and therefore should be as a reference to that project. Since the original project has MPL 2.0 License, all files in this project are also licensed under this license.
