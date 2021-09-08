@@ -1,4 +1,4 @@
-# 3d_interactive_segmentation
+# 3d medical interactive segmentation
 ## Overview
 This supervised learning project is about doing segmentation on 3d medical images with an extra input from users' clicks on the objects they want to segment. The coding of this project is done by modifying codes from Samsung AI Center's 2020 f-brs click-based interactive segementation project. In that project, the click-based interactive segmentation is done on RGB 2d pictures, and the main accomplishment of this project is extending the application to 3d volumetric medical CT images. The architecture of the deep neural network for this project is deeplab v3+ with 3D Resnet-34 backbones. To demonstrate the interactive segmentation process, I also modify the demo app from the original 2d project and make it able to show and segment 3d images page by page. Demo application allow users to give extra inputs from their clicks' coordinates, and this process is modeled by the trainer by sampling random points on the objects during training. The resulting model after training achieves a dice score of 0.9 on the spleen dataset in medical decathlon. 
 ## Training
